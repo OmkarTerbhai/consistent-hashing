@@ -12,7 +12,7 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 // Clone the Git repository
-                git url: 'https://github.com/<your-repo>.git', branch: 'main'
+                git url: 'https://github.com/OmkarTerbhai/consistent-hashing.git', branch: 'main'
             }
         }
 
@@ -20,6 +20,7 @@ pipeline {
             steps {
                 // Run Gradle build
                 sh './gradlew clean build'
+                sh './gradlew bootJar'
             }
         }
 
