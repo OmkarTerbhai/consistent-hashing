@@ -38,7 +38,7 @@ pipeline {
             steps {
                 // Deploy the application using the oc new-app command
                 sh '''
-                    oc new-app java:11~https://github.com/<your-repo>.git \
+                    oc new-app java:11~https://github.com/OmkarTerbhai/consistent-hashing.git \
                         --name=$APP_NAME --build-env GRADLE_OPTS=-Dorg.gradle.daemon=false
                 '''
             }
