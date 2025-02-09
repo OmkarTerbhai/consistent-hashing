@@ -2,50 +2,58 @@ pipeline {
     agent any
 
     environment {
-        OPENSHIFT_SERVER = 'https://console-openshift-console.apps.rm1.0a51.p1.openshiftapps.com/'
-        OPENSHIFT_TOKEN = credentials('sha256~OPVvo1Mo2A8mznqaEOxzlTpMZdKy3-UoZ6ZZ9uhmlEo') // Jenkins credential for OpenShift token
+        OPENSHIFT_SERVER = 'https://console-openshift-console.apps.rm1.0a51.p1.openshiftapps.com/' // Replace with your OpenShift Sandbox URL
+        OPENSHIFT_TOKEN = credentials('sha256~OPVvo1Mo2A8mznqaEOxzlTpMZdKy3-UoZ6ZZ9uhmlEo') //  // Add OpenShift token as a Jenkins credential
+        PROJECT_NAME = 'omkarterbhai.dev'                // Replace with your namespace
+        APP_NAME = 'my-gradle-app'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone Repository') {
             steps {
-                checkout scm
+                // Clone the Git repository
+                git url: 'https://github.com/<your-repo>.git', branch: 'main'
             }
         }
 
-        stage('Build') {
+        stage('Build Gradle Project') {
             steps {
+                // Run Gradle build
                 sh './gradlew clean build'
-                sh './gradlew bootJar'
             }
         }
 
-        stage('Push to OpenShift') {
+        stage('Login to OpenShift') {
             steps {
-                script {
-                    def appName = 'gradle-app'
-                    def namespace = '<your-namespace>'
-                    def jarFile = 'build/libs/*.jar'
-
-                    // Login to OpenShift
-                    sh "oc login ${OPENSHIFT_SERVER} --token=${OPENSHIFT_TOKEN}"
-
-                    // Create a new application or update an existing one
-                    sh "oc new-app openjdk-11~. --name=${appName} -n ${namespace} || true"
-                    sh "oc start-build ${appName} --from-file=${jarFile} --follow -n ${namespace}"
-                }
+                // Log in to OpenShift using the token
+                sh '''
+                    oc login $OPENSHIFT_SERVER --token=$OPENSHIFT_TOKEN
+                    oc project $PROJECT_NAME
+                '''
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Application') {
             steps {
-                script {
-                    def appName = 'gradle-app'
-                    def namespace = '<your-namespace>'
+                // Deploy the application using the oc new-app command
+                sh '''
+                    oc new-app java:11~https://github.com/<your-repo>.git \
+                        --name=$APP_NAME --build-env GRADLE_OPTS=-Dorg.gradle.daemon=false
+                '''
+            }
+        }
 
-                    // Expose the application
-                    sh "oc expose svc/${appName} -n ${namespace} || true"
-                }
+        stage('Expose Application') {
+            steps {
+                // Expose the application to create a route
+                sh 'oc expose svc/$APP_NAME'
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                // Verify the application is deployed and available
+                sh 'oc get route $APP_NAME'
             }
         }
     }
